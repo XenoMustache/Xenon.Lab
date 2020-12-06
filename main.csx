@@ -1,8 +1,8 @@
 #r "nuget: OpenTK, 4.3.0"
 #r "nuget: System.Drawing.Common, 5.0.0"
 
+#region Dependencies
 using PixelFormat = OpenTK.Graphics.OpenGL4.PixelFormat;
-
 using OpenTK.Windowing.Desktop;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
@@ -14,9 +14,12 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 
+#endregion
+
 #region Engine
 public class RenderWindow {
 	public GameWindow gw;
+	public Vector2i size;
 
 	IGLFWGraphicsContext ctx;
 
@@ -24,6 +27,8 @@ public class RenderWindow {
 	NativeWindowSettings nws;
 
 	public RenderWindow(string title, Vector2i size) {
+		this.size = size;
+
 		gws = new GameWindowSettings();
 		nws = new NativeWindowSettings();
 
@@ -51,9 +56,13 @@ public class RenderWindow {
 }
 
 public abstract class GameState {
-	public abstract void Initialize();
+	public RenderWindow window;
+
+	public abstract void Init();
 	public abstract void Draw();
+	public abstract void Resize();
 	public abstract void Update();
+	public abstract void Exit();
 }
 
 public class Shader {
@@ -206,6 +215,7 @@ public class Game { // Has game logic, remember to remove temp states for abstra
 		rw.gw.Load += () => Init();
 		rw.gw.UpdateFrame += (e) => Update();
 		rw.gw.RenderFrame += (e) => Draw();
+		rw.gw.Resize += (e) => Resize();
 		rw.gw.Unload += () => Exit();
 
 		rw.gw.Run();
@@ -214,19 +224,16 @@ public class Game { // Has game logic, remember to remove temp states for abstra
 	void Init() {
 		rw.CenterWindow();
 
-		cs = new Triangles();
-		cs.Initialize();
+		cs = new ElementBuffer();
+		cs.window = rw;
+
+		cs.Init();
 	}
 
-	void Update() { }
-
-	void Draw() {
-		cs.Draw();
-
-		rw.gw.SwapBuffers();
-	}
-
-	void Exit() { }
+	void Update() => cs.Update();
+	void Draw() => cs.Draw();
+	void Resize() => cs.Resize();
+	void Exit() => cs.Exit();
 }
 
 public class Triangles : GameState { // Testing states, temporary
@@ -241,7 +248,7 @@ public class Triangles : GameState { // Testing states, temporary
 
 	private Shader _shader;
 
-	public override void Initialize() {
+	public override void Init() {
 		GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
 		_vertexBufferObject = GL.GenBuffer();
@@ -249,7 +256,7 @@ public class Triangles : GameState { // Testing states, temporary
 		GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
 		GL.BufferData(BufferTarget.ArrayBuffer, _vertices.Length * sizeof(float), _vertices, BufferUsageHint.StaticDraw);
 
-		_shader = new Shader("assets/shaders/triangle.vert", "assets/shaders/triangle.frag");
+		_shader = new Shader("assets/shaders/generic.vert", "assets/shaders/generic.frag");
 		_shader.Use();
 
 		_vertexArrayObject = GL.GenVertexArray();
@@ -267,9 +274,103 @@ public class Triangles : GameState { // Testing states, temporary
 
 		GL.BindVertexArray(_vertexArrayObject);
 		GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
+
+		window.gw.SwapBuffers();
 	}
 
 	public override void Update() { }
+
+	public override void Resize() {
+		GL.Viewport(0, 0, window.size.X, window.size.Y);
+	}
+
+	public override void Exit() {
+		GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
+		GL.BindVertexArray(0);
+		GL.UseProgram(0);
+
+		GL.DeleteBuffer(_vertexBufferObject);
+		GL.DeleteVertexArray(_vertexArrayObject);
+
+		GL.DeleteProgram(_shader.handle);
+	}
+}
+
+public class ElementBuffer : GameState {
+	private readonly float[] _vertices = {
+			 0.5f,  0.5f, 0.0f, // top right
+             0.5f, -0.5f, 0.0f, // bottom right
+            -0.5f, -0.5f, 0.0f, // bottom left
+            -0.5f,  0.5f, 0.0f, // top left
+    };
+
+	private readonly uint[] _indices = {
+			0, 1, 3, // Bottom half
+            1, 2, 3  // Top half
+    };
+
+	private int _vertexBufferObject;
+	private int _vertexArrayObject;
+
+	private Shader _shader;
+
+	private int _elementBufferObject;
+
+	public override void Init() {
+		GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+
+		_vertexBufferObject = GL.GenBuffer();
+		GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
+		GL.BufferData(BufferTarget.ArrayBuffer, _vertices.Length * sizeof(float), _vertices, BufferUsageHint.StaticDraw);
+
+		_elementBufferObject = GL.GenBuffer();
+		GL.BindBuffer(BufferTarget.ElementArrayBuffer, _elementBufferObject);
+
+		GL.BufferData(BufferTarget.ElementArrayBuffer, _indices.Length * sizeof(uint), _indices, BufferUsageHint.StaticDraw);
+
+		_shader = new Shader("assets/shaders/generic.vert", "assets/shaders/generic.frag");
+		_shader.Use();
+
+		_vertexArrayObject = GL.GenVertexArray();
+		GL.BindVertexArray(_vertexArrayObject);
+
+		GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
+
+		GL.BindBuffer(BufferTarget.ElementArrayBuffer, _elementBufferObject);
+
+		GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+		GL.EnableVertexAttribArray(0);
+	}
+
+	public override void Draw() {
+		GL.Clear(ClearBufferMask.ColorBufferBit);
+
+		_shader.Use();
+
+		GL.BindVertexArray(_vertexArrayObject);
+
+		GL.DrawElements(PrimitiveType.Triangles, _indices.Length, DrawElementsType.UnsignedInt, 0);
+
+		window.gw.SwapBuffers();
+	}
+
+	public override void Update() { }
+
+	public override void Resize() {
+		GL.Viewport(0, 0, window.size.X, window.size.Y);
+	}
+
+	public override void Exit() {
+		GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
+		GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
+		GL.BindVertexArray(0);
+		GL.UseProgram(0);
+
+		GL.DeleteBuffer(_vertexBufferObject);
+		GL.DeleteBuffer(_elementBufferObject);
+		GL.DeleteVertexArray(_vertexArrayObject);
+		GL.DeleteProgram(_shader.handle);
+	}
 }
 
 #endregion
