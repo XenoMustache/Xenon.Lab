@@ -9,8 +9,6 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 
-new Game(new RenderWindow("Hello World!", new Vector2i(800, 600)));
-
 #region Engine
 public class RenderWindow {
 	public GameWindow gw;
@@ -45,39 +43,6 @@ public class RenderWindow {
 
 		return new Vector2i(videoMode->Width, videoMode->Height);
 	}
-}
-
-public class Game { // Has game logic, remember to remove temp states for abstraction
-	RenderWindow rw;
-	GameState cs;
-
-	public Game(RenderWindow window) {
-		this.rw = window;
-
-		rw.gw.Load += () => Init();
-		rw.gw.UpdateFrame += (e) => Update();
-		rw.gw.RenderFrame += (e) => Render();
-		rw.gw.Unload += () => Exit();
-
-		rw.gw.Run();
-	}
-
-	void Init() {
-		rw.CenterWindow();
-
-		cs = new Triangles();
-		cs.Initialize();
-	}
-
-	void Update() { }
-
-	void Render() {
-		cs.Render();
-
-		rw.gw.SwapBuffers();
-	}
-
-	void Exit() { }
 }
 
 public abstract class GameState {
@@ -184,6 +149,42 @@ public class Shader {
 	}
 }
 
+#endregion
+
+#region Game
+public class Game { // Has game logic, remember to remove temp states for abstraction
+	RenderWindow rw;
+	GameState cs;
+
+	public Game(RenderWindow window) {
+		this.rw = window;
+
+		rw.gw.Load += () => Init();
+		rw.gw.UpdateFrame += (e) => Update();
+		rw.gw.RenderFrame += (e) => Render();
+		rw.gw.Unload += () => Exit();
+
+		rw.gw.Run();
+	}
+
+	void Init() {
+		rw.CenterWindow();
+
+		cs = new Triangles();
+		cs.Initialize();
+	}
+
+	void Update() { }
+
+	void Render() {
+		cs.Render();
+
+		rw.gw.SwapBuffers();
+	}
+
+	void Exit() { }
+}
+
 public class Triangles : GameState { // Testing states, temporary
 	private readonly float[] _vertices = {
 			-0.5f, -0.5f, 0.0f, // Bottom-left vertex
@@ -226,4 +227,8 @@ public class Triangles : GameState { // Testing states, temporary
 
 	public override void Update() { }
 }
+
 #endregion
+
+// Primary script logic
+new Game(new RenderWindow("Hello World!", new Vector2i(800, 600)));
