@@ -11,6 +11,7 @@ using System.Collections.Generic;
 
 new Game(new RenderWindow("Hello World!", new Vector2i(800, 600)));
 
+#region Engine
 public class RenderWindow {
 	public GameWindow gw;
 
@@ -40,17 +41,13 @@ public class RenderWindow {
 	}
 
 	unsafe static Vector2i GetMonitorResolution(Monitor* handle) {
-		if (handle == null)
-			throw new ArgumentNullException(nameof(handle));
-
 		var videoMode = GLFW.GetVideoMode(handle);
 
 		return new Vector2i(videoMode->Width, videoMode->Height);
 	}
 }
 
-// Has game temp logic, remember to remove for abstraction
-public class Game {
+public class Game { // Has game logic, remember to remove temp states for abstraction
 	RenderWindow rw;
 	GameState cs;
 
@@ -187,8 +184,7 @@ public class Shader {
 	}
 }
 
-// Testing states, temporary
-public class Triangles : GameState {
+public class Triangles : GameState { // Testing states, temporary
 	private readonly float[] _vertices = {
 			-0.5f, -0.5f, 0.0f, // Bottom-left vertex
              0.5f, -0.5f, 0.0f, // Bottom-right vertex
@@ -230,3 +226,4 @@ public class Triangles : GameState {
 
 	public override void Update() { }
 }
+#endregion
