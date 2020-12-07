@@ -1,7 +1,6 @@
 #r "nuget: OpenTK, 4.3.0"
 #r "nuget: System.Drawing.Common, 5.0.0"
 
-#region Dependencies
 using PixelFormat = OpenTK.Graphics.OpenGL4.PixelFormat;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Graphics.OpenGL4;
@@ -14,12 +13,9 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 
-#endregion
-
-#region Engine
+// Engine
 public class RenderWindow {
 	public GameWindow gw;
-	public Vector2i size;
 
 	IGLFWGraphicsContext ctx;
 
@@ -27,8 +23,6 @@ public class RenderWindow {
 	NativeWindowSettings nws;
 
 	public RenderWindow(string title, Vector2i size) {
-		this.size = size;
-
 		gws = new GameWindowSettings();
 		nws = new NativeWindowSettings();
 
@@ -202,9 +196,7 @@ public class Texture {
 	}
 }
 
-#endregion
-
-#region Game
+// Game
 public class Game { // Has game logic, remember to remove temp states for abstraction
 	RenderWindow rw;
 	GameState cs;
@@ -230,7 +222,10 @@ public class Game { // Has game logic, remember to remove temp states for abstra
 		cs.Init();
 	}
 
-	void Update() => cs.Update();
+	void Update() {
+		cs.Update();
+	}
+
 	void Draw() => cs.Draw();
 	void Resize() => cs.Resize();
 	void Exit() => cs.Exit();
@@ -281,7 +276,7 @@ public class Triangles : GameState { // Testing states, temporary
 	public override void Update() { }
 
 	public override void Resize() {
-		GL.Viewport(0, 0, window.size.X, window.size.Y);
+		GL.Viewport(0, 0, window.gw.Size.X, window.gw.Size.Y);
 	}
 
 	public override void Exit() {
@@ -357,7 +352,7 @@ public class ElementBuffer : GameState {
 	public override void Update() { }
 
 	public override void Resize() {
-		GL.Viewport(0, 0, window.size.X, window.size.Y);
+		GL.Viewport(0, 0, window.gw.Size.X, window.gw.Size.Y);
 	}
 
 	public override void Exit() {
@@ -372,8 +367,6 @@ public class ElementBuffer : GameState {
 		GL.DeleteProgram(_shader.handle);
 	}
 }
-
-#endregion
 
 // Primary script logic
 new Game(new RenderWindow("Hello World!", new Vector2i(800, 600)));
