@@ -309,7 +309,7 @@ public class Triangles : GameState { // Testing states, temporary
 		GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
 		GL.BufferData(BufferTarget.ArrayBuffer, _vertices.Length * sizeof(float), _vertices, BufferUsageHint.StaticDraw);
 
-		_shader = new Shader("assets/shaders/generic.vert", "assets/shaders/generic.frag");
+		_shader = new Shader("assets/shaders/Generic.vert", "assets/shaders/Generic.frag");
 		_shader.Use();
 
 		_vertexArrayObject = GL.GenVertexArray();
@@ -381,7 +381,7 @@ public class ElementBuffer : GameState {
 
 		GL.BufferData(BufferTarget.ElementArrayBuffer, _indices.Length * sizeof(uint), _indices, BufferUsageHint.StaticDraw);
 
-		_shader = new Shader("assets/shaders/generic.vert", "assets/shaders/generic.frag");
+		_shader = new Shader("assets/shaders/Generic.vert", "assets/shaders/Generic.frag");
 		_shader.Use();
 
 		_vertexArrayObject = GL.GenVertexArray();
@@ -427,6 +427,6 @@ public class ElementBuffer : GameState {
 }
 
 // Primary script logic
-// new Game(new RenderWindow("Hello World!", new Vector2i(800, 600)));
+new Game(new RenderWindow("Hello World!", new Vector2i(800, 600)));
 
-Script.Compile("assets\\scripts\\", "Example", null, "Start", new Object[] { 1, "Hello world!" });
+// Script.Compile("assets\\scripts\\", "Example", null, "Start", new Object[] { 1.ToString() });

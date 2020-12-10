@@ -1,7 +1,7 @@
 using System;
 
 public class Example {
-	public void Start(int exampleInt, string exampleString) {
-		Console.WriteLine($"{exampleInt}, {exampleString}");
+	public void Start(string text) {
+		Console.WriteLine($"{text}");
 	}
 }
