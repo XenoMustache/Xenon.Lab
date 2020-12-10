@@ -245,9 +245,9 @@ public static class Script {
 			} else {
 				ms.Seek(0, SeekOrigin.Begin);
 
-				Assembly assmbly = AssemblyLoadContext.Default.LoadFromStream(ms);
-				var type = assmbly.GetType($"{assembly}.{file}");
-				var instance = assmbly.CreateInstance($"{assembly}.{file}");
+				Assembly asm = AssemblyLoadContext.Default.LoadFromStream(ms);
+				var type = asm.GetType($"{assembly}.{file}");
+				var instance = asm.CreateInstance($"{assembly}.{file}");
 				var meth = type.GetMember(method).First() as MethodInfo;
 				meth.Invoke(instance, args);
 			}
@@ -293,4 +293,4 @@ public class Game { // Has game logic, remember to remove temp states for abstra
 // Primary script logic
 // new Game(new RenderWindow("Hello World!", new Vector2i(800, 600)));
 
-Script.Compile("Example", "Start", new [] { 1.ToString() }, "assets\\scripts\\");
+Script.Compile("Example", "Start", new [] { "Hello world!"}, "assets\\scripts\\");
