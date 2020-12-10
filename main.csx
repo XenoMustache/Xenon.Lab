@@ -1,5 +1,9 @@
 #r "nuget: OpenTK, 4.3.0"
 #r "nuget: System.Drawing.Common, 5.0.0"
+#r "nuget: System.CodeDom, 5.0.0"
+#r "nuget: System.Runtime.Loader, 4.3.0"
+#r "nuget: Newtonsoft.Json, 12.0.3"
+#r "nuget: Microsoft.CodeAnalysis.CSharp, 3.8.0"
 
 using PixelFormat = OpenTK.Graphics.OpenGL4.PixelFormat;
 using OpenTK.Windowing.Desktop;
@@ -12,13 +16,20 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Text;
 using System.Collections.Generic;
+using System.CodeDom;
+using System.CodeDom.Compiler;
+using Microsoft.CSharp;
+using System.Reflection;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Emit;
+using System.Runtime.Loader;
 
 // Engine
 public class RenderWindow {
 	public GameWindow gw;
 
 	IGLFWGraphicsContext ctx;
-
 	GameWindowSettings gws;
 	NativeWindowSettings nws;
 
@@ -196,6 +207,53 @@ public class Texture {
 	}
 }
 
+public static class Script {
+	public static void Compile(string location, string file, string assembly = null, string method = "Start", Object[] args = null) {
+		string codeToCompile = File.ReadAllText(location + file + ".cs");
+
+		SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(codeToCompile);
+
+		string assemblyName = Path.GetRandomFileName();
+
+		var refPaths = new[] {
+			typeof(System.Object).GetTypeInfo().Assembly.Location,
+			typeof(Console).GetTypeInfo().Assembly.Location,
+			Path.Combine(Path.GetDirectoryName(typeof(System.Runtime.GCSettings).GetTypeInfo().Assembly.Location), "System.Runtime.dll")
+		};
+
+		MetadataReference[] references = refPaths.Select(r => MetadataReference.CreateFromFile(r)).ToArray();
+
+		CSharpCompilation compilation = CSharpCompilation.Create(
+			assemblyName,
+			syntaxTrees: new[] { syntaxTree },
+			references: references,
+			options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+		using (var ms = new MemoryStream()) {
+			EmitResult result = compilation.Emit(ms);
+
+			if (!result.Success) {
+				Write("Compilation failed!");
+				IEnumerable<Diagnostic> failures = result.Diagnostics.Where(diagnostic =>
+					diagnostic.IsWarningAsError ||
+					diagnostic.Severity == DiagnosticSeverity.Error);
+
+				foreach (Diagnostic diagnostic in failures) {
+					Console.Error.WriteLine("\t{0}: {1}", diagnostic.Id, diagnostic.GetMessage());
+				}
+			} else {
+				ms.Seek(0, SeekOrigin.Begin);
+
+				Assembly assmbly = AssemblyLoadContext.Default.LoadFromStream(ms);
+				var type = assmbly.GetType(assembly + "." + file);
+				var instance = assmbly.CreateInstance(assembly + "." + file);
+				var meth = type.GetMember(method).First() as MethodInfo;
+				meth.Invoke(instance, args);
+			}
+		}
+	}
+}
+
 // Game
 public class Game { // Has game logic, remember to remove temp states for abstraction
 	RenderWindow rw;
@@ -369,4 +427,6 @@ public class ElementBuffer : GameState {
 }
 
 // Primary script logic
-new Game(new RenderWindow("Hello World!", new Vector2i(800, 600)));
+// new Game(new RenderWindow("Hello World!", new Vector2i(800, 600)));
+
+Script.Compile("assets\\scripts\\", "Example", null, "Start", new Object[] { 1, "Hello world!" });
