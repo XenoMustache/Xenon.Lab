@@ -192,6 +192,7 @@ public class Texture {
 				PixelType.UnsignedByte,
 				data.Scan0);
 		}
+
 		GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
 		GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
 
@@ -208,8 +209,8 @@ public class Texture {
 }
 
 public static class Script {
-	public static void Compile(string location, string file, string assembly = null, string method = "Start", Object[] args = null) {
-		string codeToCompile = File.ReadAllText(location + file + ".cs");
+	public static void Compile(string file, string method = "Start", Object[] args = null, string location = "", string assembly = null) {
+		string codeToCompile = File.ReadAllText($"{location}{file}.cs");
 
 		SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(codeToCompile);
 
@@ -233,7 +234,7 @@ public static class Script {
 			EmitResult result = compilation.Emit(ms);
 
 			if (!result.Success) {
-				Write("Compilation failed!");
+				Write($"Compilation of {file}.cs failed!");
 				IEnumerable<Diagnostic> failures = result.Diagnostics.Where(diagnostic =>
 					diagnostic.IsWarningAsError ||
 					diagnostic.Severity == DiagnosticSeverity.Error);
@@ -245,8 +246,8 @@ public static class Script {
 				ms.Seek(0, SeekOrigin.Begin);
 
 				Assembly assmbly = AssemblyLoadContext.Default.LoadFromStream(ms);
-				var type = assmbly.GetType(assembly + "." + file);
-				var instance = assmbly.CreateInstance(assembly + "." + file);
+				var type = assmbly.GetType($"{assembly}.{file}");
+				var instance = assmbly.CreateInstance($"{assembly}.{file}");
 				var meth = type.GetMember(method).First() as MethodInfo;
 				meth.Invoke(instance, args);
 			}
@@ -274,7 +275,7 @@ public class Game { // Has game logic, remember to remove temp states for abstra
 	void Init() {
 		rw.CenterWindow();
 
-		cs = new ElementBuffer();
+		//cs = new ElementBuffer();
 		cs.window = rw;
 
 		cs.Init();
@@ -289,144 +290,7 @@ public class Game { // Has game logic, remember to remove temp states for abstra
 	void Exit() => cs.Exit();
 }
 
-public class Triangles : GameState { // Testing states, temporary
-	private readonly float[] _vertices = {
-			-0.5f, -0.5f, 0.0f, // Bottom-left vertex
-             0.5f, -0.5f, 0.0f, // Bottom-right vertex
-             0.0f,  0.5f, 0.0f  // Top vertex
-        };
-
-	private int _vertexBufferObject;
-	private int _vertexArrayObject;
-
-	private Shader _shader;
-
-	public override void Init() {
-		GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-
-		_vertexBufferObject = GL.GenBuffer();
-
-		GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
-		GL.BufferData(BufferTarget.ArrayBuffer, _vertices.Length * sizeof(float), _vertices, BufferUsageHint.StaticDraw);
-
-		_shader = new Shader("assets/shaders/Generic.vert", "assets/shaders/Generic.frag");
-		_shader.Use();
-
-		_vertexArrayObject = GL.GenVertexArray();
-		GL.BindVertexArray(_vertexArrayObject);
-
-		GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
-		GL.EnableVertexAttribArray(0);
-		GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
-	}
-
-	public override void Draw() {
-		GL.Clear(ClearBufferMask.ColorBufferBit);
-
-		_shader.Use();
-
-		GL.BindVertexArray(_vertexArrayObject);
-		GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
-
-		window.gw.SwapBuffers();
-	}
-
-	public override void Update() { }
-
-	public override void Resize() {
-		GL.Viewport(0, 0, window.gw.Size.X, window.gw.Size.Y);
-	}
-
-	public override void Exit() {
-		GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
-		GL.BindVertexArray(0);
-		GL.UseProgram(0);
-
-		GL.DeleteBuffer(_vertexBufferObject);
-		GL.DeleteVertexArray(_vertexArrayObject);
-
-		GL.DeleteProgram(_shader.handle);
-	}
-}
-
-public class ElementBuffer : GameState {
-	private readonly float[] _vertices = {
-			 0.5f,  0.5f, 0.0f, // top right
-             0.5f, -0.5f, 0.0f, // bottom right
-            -0.5f, -0.5f, 0.0f, // bottom left
-            -0.5f,  0.5f, 0.0f, // top left
-    };
-
-	private readonly uint[] _indices = {
-			0, 1, 3, // Bottom half
-            1, 2, 3  // Top half
-    };
-
-	private int _vertexBufferObject;
-	private int _vertexArrayObject;
-
-	private Shader _shader;
-
-	private int _elementBufferObject;
-
-	public override void Init() {
-		GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-
-		_vertexBufferObject = GL.GenBuffer();
-		GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
-		GL.BufferData(BufferTarget.ArrayBuffer, _vertices.Length * sizeof(float), _vertices, BufferUsageHint.StaticDraw);
-
-		_elementBufferObject = GL.GenBuffer();
-		GL.BindBuffer(BufferTarget.ElementArrayBuffer, _elementBufferObject);
-
-		GL.BufferData(BufferTarget.ElementArrayBuffer, _indices.Length * sizeof(uint), _indices, BufferUsageHint.StaticDraw);
-
-		_shader = new Shader("assets/shaders/Generic.vert", "assets/shaders/Generic.frag");
-		_shader.Use();
-
-		_vertexArrayObject = GL.GenVertexArray();
-		GL.BindVertexArray(_vertexArrayObject);
-
-		GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
-
-		GL.BindBuffer(BufferTarget.ElementArrayBuffer, _elementBufferObject);
-
-		GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
-		GL.EnableVertexAttribArray(0);
-	}
-
-	public override void Draw() {
-		GL.Clear(ClearBufferMask.ColorBufferBit);
-
-		_shader.Use();
-
-		GL.BindVertexArray(_vertexArrayObject);
-
-		GL.DrawElements(PrimitiveType.Triangles, _indices.Length, DrawElementsType.UnsignedInt, 0);
-
-		window.gw.SwapBuffers();
-	}
-
-	public override void Update() { }
-
-	public override void Resize() {
-		GL.Viewport(0, 0, window.gw.Size.X, window.gw.Size.Y);
-	}
-
-	public override void Exit() {
-		GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
-		GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
-		GL.BindVertexArray(0);
-		GL.UseProgram(0);
-
-		GL.DeleteBuffer(_vertexBufferObject);
-		GL.DeleteBuffer(_elementBufferObject);
-		GL.DeleteVertexArray(_vertexArrayObject);
-		GL.DeleteProgram(_shader.handle);
-	}
-}
-
 // Primary script logic
-new Game(new RenderWindow("Hello World!", new Vector2i(800, 600)));
+// new Game(new RenderWindow("Hello World!", new Vector2i(800, 600)));
 
-// Script.Compile("assets\\scripts\\", "Example", null, "Start", new Object[] { 1.ToString() });
+Script.Compile("Example", "Start", new [] { 1.ToString() }, "assets\\scripts\\");
